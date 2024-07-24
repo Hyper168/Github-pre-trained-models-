@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Generator</title>
+    <style>
+        #generated-text {
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome, <span id="user-name">{{ user_name }}</span>!</h1>
+    <input type="text" id="input-text" placeholder="Enter your text here">
+    <button onclick="generateText()">Generate Text</button>
+    <div id="generated-text"></div>
+
+    <script>
+        function typeEffect(element, text, delay = 50) {
+            let i = 0;
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(type, delay);
+                }
+            }
+            type();
+        }
+
+        async function generateText() {
+            const inputText = document.getElementById('input-text').value;
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ input_text: inputText })
+            });
+
+            const result = await response.json();
+            const generatedText = result.generated_text;
+
+            const outputElement = document.getElementById('generated-text');
+            outputElement.innerHTML = '';  // Clear previous text
+            typeEffect(outputElement, generatedText);
+        }
+    </script>
+</body>
+</html>
