@@ -1,42 +1,55 @@
-from flask import Flask, request, jsonify, render_template
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-app = Flask(__name__)
 
-# Load pre-trained model and tokenizer
-model_name = 'gpt2-medium'
-tokenizer = GPT2Tokenizer.from_pretrained(model_name)
-model = GPT2LMHeadModel.from_pretrained(model_name)
+def generate_text(prompt, max_length=500, num_return_sequences=1):
+    # Load the tokenizer and model
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2-xl')
 
-@app.route('/')
-def index():
-    return render_template('index.html')
 
-@app.route('/generate', methods=['POST'])
-def generate_text():
-    data = request.json
-    input_text = data.get('input_text', '')
+    # Add pad token if it doesn't exist
+    if tokenizer.pad_token is None:
+        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
-    # Tokenize input and create attention mask
-    inputs = tokenizer(input_text, return_tensors='pt', padding=True, truncation=True)
-    input_ids = inputs['input_ids']
-    attention_mask = inputs['attention_mask'] if 'attention_mask' in inputs else None
+    model = GPT2LMHeadModel.from_pretrained('gpt2-xl')
 
-    # Generate text with attention mask
-    outputs = model.generate(
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        max_length=200,  # Adjust this value based on your needs
-        num_return_sequences=1,
-        no_repeat_ngram_size=2,
-        early_stopping=True
-    )
-    
-    # Decode the generated text
-    generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    
-    return jsonify({'generated_text': generated_text})
+    
 
-if __name__ == '__main__':
-    app.run(debug=True)
-    
+    # Tokenize input with padding
+    inputs = tokenizer(prompt,
+                       return_tensors='pt',
+                       padding=True,
+                       truncation=True)
+
+    # Extract input_ids and attention_mask
+    input_ids = inputs['input_ids']
+    attention_mask = inputs['attention_mask']
+
+    # Generate text
+    output = model.generate(
+        input_ids,
+        attention_mask=attention_mask,
+        max_length=max_length,
+        num_return_sequences=num_return_sequences,
+        no_repeat_ngram_size=2,  # Prevent repeating the same n-grams
+        num_beams=5,
+        early_stopping=True)
+
+    # Decode and return the generated text
+    generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+    return generated_text
+
+
+# Start the loop
+while True:
+    # Get input from the user
+    user_input = input("Enter a starting sentence (or type 'exit' to quit): ")
+
+    # Check if the user wants to exit
+    if user_input.lower() == 'exit':
+        break
+
+    # Generate and show the text
+    generated_text = generate_text(user_input)
+    print("Generated text:")
+    print(generated_text)
+    print("\n")  # Add a newline for better readability
